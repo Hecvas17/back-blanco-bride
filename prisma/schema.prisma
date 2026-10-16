@@ -1,0 +1,274 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EstatusPedido {
+  BORRADOR
+  CONFIRMADO
+  EN_PROCESO
+  LISTO
+  ENTREGADO
+  CANCELADO
+}
+
+enum TipoCliente {
+  NOVIA
+  QUINCEANERA
+  NEGOCIO
+  OTRO
+}
+
+enum DualTexto {
+  DUAL_CENTRADO
+  DUAL_LADO
+  NINGUNO
+}
+
+enum TipoProducto {
+  BATA_NORMAL
+  BATA_INFANTIL
+  BATA_ENCAJE
+  PANTALON
+  TOALLA
+  PANUELO
+  PANUELO_MASCOTA
+  PANTUFLAS
+  PLAYERA_HOMBRE
+}
+
+enum EstatusProveedor {
+  PENDIENTE
+  POR_SOLICITAR
+  SOLICITADO
+  EN_PRODUCCION
+  LISTO_PROVEEDOR
+  RECIBIDO
+  CANCELADO
+}
+
+enum EstatusBataEncaje {
+  SOLICITADA
+  YA_LLEGO
+  LISTA
+}
+
+enum TallaMascota {
+  CHICA
+  MEDIANA
+  GRANDE
+}
+
+enum OpcionPantufla {
+  XV_BORDADO_PLATA
+  XV_BORDADO_DORADO
+  BRIDE_BORDADO
+  SIN_BORDADO
+}
+
+model Cliente {
+  id            String   @id @default(uuid()) @db.Uuid
+  nombre        String   @unique
+  telefono      String?
+  correo        String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  pedidos Pedido[]
+
+  @@index([nombre])
+  @@index([activo])
+  @@map("clientes")
+}
+
+model Usuario {
+  id            String   @id @default(uuid()) @db.Uuid
+  nombre        String
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  @@index([activo])
+  @@map("usuarios")
+}
+
+model Proveedor {
+  id            String   @id @default(uuid()) @db.Uuid
+  nombre        String   @unique
+  observaciones String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  productos PedidoProducto[]
+
+  @@index([activo])
+  @@map("proveedores")
+}
+
+model Color {
+  id                 String   @id @default(uuid()) @db.Uuid
+  nombre             String   @unique
+  disponibleProducto Boolean  @default(false) @map("disponible_producto")
+  disponibleBordado  Boolean  @default(false) @map("disponible_bordado")
+  activo             Boolean  @default(true)
+  orden              Int      @default(0)
+  creadoEn           DateTime @default(now()) @map("creado_en")
+  actualizadoEn      DateTime @updatedAt @map("actualizado_en")
+
+  productosColor      PedidoProducto[] @relation("ProductoColor")
+  productosColorTexto PedidoProducto[] @relation("ProductoColorTexto")
+
+  @@index([activo])
+  @@map("colores")
+}
+
+model Talla {
+  id            String   @id @default(uuid()) @db.Uuid
+  nombre        String   @unique
+  orden         Int      @default(0)
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  productos PedidoProducto[]
+
+  @@index([activo])
+  @@map("tallas")
+}
+
+model Tipografia {
+  id            String   @id @default(uuid()) @db.Uuid
+  nombre        String   @unique
+  muestra       String?
+  orden         Int      @default(0)
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  pedidos Pedido[]
+
+  @@index([activo])
+  @@map("tipografias")
+}
+
+model TipoEncaje {
+  id            String   @id @default(uuid()) @db.Uuid
+  nombre        String   @unique
+  orden         Int      @default(0)
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  productos PedidoProducto[]
+
+  @@index([activo])
+  @@map("tipos_encaje")
+}
+
+model Pedido {
+  id                  String        @id @default(uuid()) @db.Uuid
+  folio               String        @unique
+  clienteId           String?       @map("cliente_id") @db.Uuid
+  clienteNombre       String        @map("cliente_nombre")
+  fechaEvento         DateTime      @map("fecha_evento") @db.Date
+  ubicacion           String
+  terminacionContacto String        @map("terminacion_contacto")
+  tipoCliente         TipoCliente   @map("tipo_cliente")
+  tipoClienteOtro     String?       @map("tipo_cliente_otro")
+  anticipo            Decimal       @default(0) @db.Decimal(12, 2)
+  tipografiaId        String        @map("tipografia_id") @db.Uuid
+  dualTexto           DualTexto     @default(NINGUNO) @map("dual_texto")
+  estatus             EstatusPedido @default(BORRADOR)
+  creadoEn            DateTime      @default(now()) @map("creado_en")
+  actualizadoEn       DateTime      @updatedAt @map("actualizado_en")
+
+  cliente     Cliente?           @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  tipografia  Tipografia         @relation(fields: [tipografiaId], references: [id], onDelete: Restrict)
+  productos   PedidoProducto[]
+  adicionales PedidoAdicional[]
+  referencias PedidoReferencia[]
+
+  @@index([folio])
+  @@index([fechaEvento])
+  @@index([estatus])
+  @@index([clienteId])
+  @@map("pedidos")
+}
+
+model PedidoAdicional {
+  id            String   @id @default(uuid()) @db.Uuid
+  pedidoId      String   @map("pedido_id") @db.Uuid
+  folio         String   @unique
+  observaciones String?
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @updatedAt @map("actualizado_en")
+
+  pedido    Pedido           @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  productos PedidoProducto[]
+
+  @@index([pedidoId])
+  @@map("pedido_adicionales")
+}
+
+model PedidoProducto {
+  id                String             @id @default(uuid()) @db.Uuid
+  pedidoId          String             @map("pedido_id") @db.Uuid
+  adicionalId       String?            @map("adicional_id") @db.Uuid
+  tipo              TipoProducto
+  cantidad          Int                @default(1)
+  precioUnitario    Decimal            @default(0) @map("precio_unitario") @db.Decimal(12, 2)
+  proveedorId       String?            @map("proveedor_id") @db.Uuid
+  estatusProveedor  EstatusProveedor   @default(PENDIENTE) @map("estatus_proveedor")
+  colorId           String?            @map("color_id") @db.Uuid
+  colorTextoId      String?            @map("color_texto_id") @db.Uuid
+  tallaId           String?            @map("talla_id") @db.Uuid
+  texto             String?
+  bordadoFrontal    String?            @map("bordado_frontal")
+  bordadoPosterior  String?            @map("bordado_posterior")
+  observaciones     String?
+  tipoEncajeId      String?            @map("tipo_encaje_id") @db.Uuid
+  estatusBataEncaje EstatusBataEncaje? @map("estatus_bata_encaje")
+  tallaMascota      TallaMascota?      @map("talla_mascota")
+  opcionPantufla    OpcionPantufla?    @map("opcion_pantufla")
+  creadoEn          DateTime           @default(now()) @map("creado_en")
+  actualizadoEn     DateTime           @updatedAt @map("actualizado_en")
+
+  pedido     Pedido           @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  adicional  PedidoAdicional? @relation(fields: [adicionalId], references: [id], onDelete: Cascade)
+  proveedor  Proveedor?       @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
+  color      Color?           @relation("ProductoColor", fields: [colorId], references: [id], onDelete: Restrict)
+  colorTexto Color?           @relation("ProductoColorTexto", fields: [colorTextoId], references: [id], onDelete: Restrict)
+  talla      Talla?           @relation(fields: [tallaId], references: [id], onDelete: Restrict)
+  tipoEncaje TipoEncaje?      @relation(fields: [tipoEncajeId], references: [id], onDelete: Restrict)
+
+  @@index([pedidoId])
+  @@index([adicionalId])
+  @@index([tipo])
+  @@index([proveedorId])
+  @@index([estatusProveedor])
+  @@index([estatusBataEncaje])
+  @@map("pedido_productos")
+}
+
+model PedidoReferencia {
+  id            String   @id @default(uuid()) @db.Uuid
+  pedidoId      String   @map("pedido_id") @db.Uuid
+  nombreArchivo String   @map("nombre_archivo")
+  tipoMime      String?  @map("tipo_mime")
+  rutaArchivo   String?  @map("ruta_archivo")
+  tamanoBytes   Int?     @map("tamano_bytes")
+  creadoEn      DateTime @default(now()) @map("creado_en")
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@index([pedidoId])
+  @@map("pedido_referencias")
+}
