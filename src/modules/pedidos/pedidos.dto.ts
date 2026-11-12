@@ -1,12 +1,12 @@
 import { Transform, Type } from 'class-transformer';
-import { IsDateString, IsEmail, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Min, ValidateNested } from 'class-validator';
-import { DualTexto, EstatusBataEncaje, EstatusPedido, EstatusProveedor, OpcionPantufla, TallaMascota, TipoCliente, TipoProducto } from '@prisma/client';
+import { IsBoolean, IsDateString, IsEmail, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, Min, ValidateNested } from 'class-validator';
+import { AlineacionBordado, DualTexto, EstatusBataEncaje, EstatusPedido, EstatusPedidoEncaje, EstatusProveedor, OpcionPantufla, TallaMascota, TipoCliente, TipoProducto } from '@prisma/client';
 
 const upper = ({ value }: { value: unknown }) => typeof value === 'string' ? value.toUpperCase() : value;
 
 export class CreateProductoDto {
   @Transform(upper) @IsEnum(TipoProducto) tipo!: TipoProducto;
-  @Type(() => Number) @IsInt() @Min(1) cantidad!: number;
+  @Type(() => Number) @IsInt() @Min(1) @Max(100) cantidad!: number;
   @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) precioUnitario!: number;
   @IsOptional() @IsUUID() proveedorId?: string;
   @Transform(upper) @IsOptional() @IsEnum(EstatusProveedor) estatusProveedor?: EstatusProveedor;
@@ -16,6 +16,7 @@ export class CreateProductoDto {
   @IsOptional() @IsString() texto?: string;
   @IsOptional() @IsString() bordadoFrontal?: string;
   @IsOptional() @IsString() bordadoPosterior?: string;
+  @Transform(upper) @IsOptional() @IsEnum(AlineacionBordado) alineacionBordado?: AlineacionBordado;
   @IsOptional() @IsString() observaciones?: string;
   @IsOptional() @IsUUID() tipoEncajeId?: string;
   @Transform(upper) @IsOptional() @IsEnum(EstatusBataEncaje) estatusBataEncaje?: EstatusBataEncaje;
@@ -34,6 +35,9 @@ export class CreatePedidoDto {
   @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) anticipo!: number;
   @IsUUID() tipografiaId!: string;
   @Transform(upper) @IsEnum(DualTexto) dualTexto!: DualTexto;
+  @IsOptional() @IsBoolean() esUrgente?: boolean;
+  @IsOptional() @Transform(upper) @IsEnum(EstatusPedidoEncaje) estatusPedidoEncaje?: EstatusPedidoEncaje;
+  @IsOptional() @IsString() observaciones?: string;
   @ValidateNested({ each: true }) @Type(() => CreateProductoDto) productos!: CreateProductoDto[];
 }
 
@@ -48,14 +52,22 @@ export class UpdatePedidoDto {
   @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) anticipo?: number;
   @IsOptional() @IsUUID() tipografiaId?: string;
   @Transform(upper) @IsOptional() @IsEnum(DualTexto) dualTexto?: DualTexto;
+  @IsOptional() @IsBoolean() esUrgente?: boolean;
+  @IsOptional() @Transform(upper) @IsEnum(EstatusPedidoEncaje) estatusPedidoEncaje?: EstatusPedidoEncaje;
+  @IsOptional() @IsString() observaciones?: string;
 }
 
-export class EstatusPedidoDto { @Transform(upper) @IsEnum(EstatusPedido) estatus!: EstatusPedido; }
+export class EstatusPedidoDto {
+  @Transform(upper) @IsEnum(EstatusPedido) estatus!: EstatusPedido;
+  @IsOptional() @Transform(upper) @IsEnum(EstatusPedidoEncaje) estatusPedidoEncaje?: EstatusPedidoEncaje;
+  @IsOptional() @IsString() observaciones?: string;
+}
 export class EstatusProveedorDto { @Transform(upper) @IsEnum(EstatusProveedor) estatusProveedor!: EstatusProveedor; }
 
 export class PedidosQueryDto {
   @IsOptional() @IsString() buscar?: string;
   @Transform(upper) @IsOptional() @IsEnum(EstatusPedido) estatus?: EstatusPedido;
+  @Transform(upper) @IsOptional() @IsEnum(EstatusPedidoEncaje) estatusPedidoEncaje?: EstatusPedidoEncaje;
 }
 
 export class CreateAdicionalDto {

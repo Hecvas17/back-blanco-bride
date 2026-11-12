@@ -8,12 +8,13 @@ datasource db {
 }
 
 enum EstatusPedido {
-  BORRADOR
-  CONFIRMADO
-  EN_PROCESO
-  LISTO
+  EN_PRODUCCION
+  SALIO_DE_PRODUCCION
+  POR_LIQUIDAR
+  GENERAR_GUIA
+  EN_TRANSITO
   ENTREGADO
-  CANCELADO
+  SITUACION
 }
 
 enum TipoCliente {
@@ -27,6 +28,12 @@ enum DualTexto {
   DUAL_CENTRADO
   DUAL_LADO
   NINGUNO
+}
+
+enum AlineacionBordado {
+  IZQUIERDA
+  CENTRO
+  DERECHA
 }
 
 enum TipoProducto {
@@ -52,9 +59,16 @@ enum EstatusProveedor {
 }
 
 enum EstatusBataEncaje {
+  SIN_SOLICITAR
   SOLICITADA
   YA_LLEGO
+  EN_PRODUCCION
   LISTA
+}
+
+enum EstatusPedidoEncaje {
+  EN_PRODUCCION
+  BATAS_NORMALES_LISTAS
 }
 
 enum TallaMascota {
@@ -174,21 +188,24 @@ model TipoEncaje {
 }
 
 model Pedido {
-  id                  String        @id @default(uuid()) @db.Uuid
-  folio               String        @unique
-  clienteId           String?       @map("cliente_id") @db.Uuid
-  clienteNombre       String        @map("cliente_nombre")
-  fechaEvento         DateTime      @map("fecha_evento") @db.Date
+  id                  String               @id @default(uuid()) @db.Uuid
+  folio               String               @unique
+  clienteId           String?              @map("cliente_id") @db.Uuid
+  clienteNombre       String               @map("cliente_nombre")
+  fechaEvento         DateTime             @map("fecha_evento") @db.Date
   ubicacion           String
-  terminacionContacto String        @map("terminacion_contacto")
-  tipoCliente         TipoCliente   @map("tipo_cliente")
-  tipoClienteOtro     String?       @map("tipo_cliente_otro")
-  anticipo            Decimal       @default(0) @db.Decimal(12, 2)
-  tipografiaId        String        @map("tipografia_id") @db.Uuid
-  dualTexto           DualTexto     @default(NINGUNO) @map("dual_texto")
-  estatus             EstatusPedido @default(BORRADOR)
-  creadoEn            DateTime      @default(now()) @map("creado_en")
-  actualizadoEn       DateTime      @updatedAt @map("actualizado_en")
+  terminacionContacto String               @map("terminacion_contacto")
+  tipoCliente         TipoCliente          @map("tipo_cliente")
+  tipoClienteOtro     String?              @map("tipo_cliente_otro")
+  anticipo            Decimal              @default(0) @db.Decimal(12, 2)
+  tipografiaId        String               @map("tipografia_id") @db.Uuid
+  dualTexto           DualTexto            @default(NINGUNO) @map("dual_texto")
+  estatus             EstatusPedido        @default(EN_PRODUCCION)
+  esUrgente           Boolean              @default(false) @map("es_urgente")
+  estatusPedidoEncaje EstatusPedidoEncaje? @map("estatus_pedido_encaje")
+  observaciones       String?
+  creadoEn            DateTime             @default(now()) @map("creado_en")
+  actualizadoEn       DateTime             @updatedAt @map("actualizado_en")
 
   cliente     Cliente?           @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   tipografia  Tipografia         @relation(fields: [tipografiaId], references: [id], onDelete: Restrict)
@@ -222,6 +239,7 @@ model PedidoProducto {
   id                String             @id @default(uuid()) @db.Uuid
   pedidoId          String             @map("pedido_id") @db.Uuid
   adicionalId       String?            @map("adicional_id") @db.Uuid
+  grupoProductoId   String?            @map("grupo_producto_id") @db.Uuid
   tipo              TipoProducto
   cantidad          Int                @default(1)
   precioUnitario    Decimal            @default(0) @map("precio_unitario") @db.Decimal(12, 2)
@@ -233,6 +251,7 @@ model PedidoProducto {
   texto             String?
   bordadoFrontal    String?            @map("bordado_frontal")
   bordadoPosterior  String?            @map("bordado_posterior")
+  alineacionBordado AlineacionBordado? @map("alineacion_bordado")
   observaciones     String?
   tipoEncajeId      String?            @map("tipo_encaje_id") @db.Uuid
   estatusBataEncaje EstatusBataEncaje? @map("estatus_bata_encaje")
@@ -251,6 +270,7 @@ model PedidoProducto {
 
   @@index([pedidoId])
   @@index([adicionalId])
+  @@index([grupoProductoId])
   @@index([tipo])
   @@index([proveedorId])
   @@index([estatusProveedor])

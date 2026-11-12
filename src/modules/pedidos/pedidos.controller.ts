@@ -9,7 +9,7 @@ export class PedidosController {
   @Get(':id') uno(@Param('id', ParseUUIDPipe) id: string) { return this.service.uno(id); }
   @Post() crear(@Body() dto: CreatePedidoDto) { return this.service.crear(dto); }
   @Patch(':id') actualizar(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePedidoDto) { return this.service.actualizar(id, dto); }
-  @Patch(':id/estatus') estatus(@Param('id', ParseUUIDPipe) id: string, @Body() dto: EstatusPedidoDto) { return this.service.estatus(id, dto.estatus); }
+  @Patch(':id/estatus') estatus(@Param('id', ParseUUIDPipe) id: string, @Body() dto: EstatusPedidoDto) { return this.service.estatus(id, dto); }
 
   @Post(':pedidoId/productos') agregarProducto(@Param('pedidoId', ParseUUIDPipe) pedidoId: string, @Body() dto: CreateProductoDto) { return this.service.agregarProducto(pedidoId, dto); }
   @Patch(':pedidoId/productos/:productoId') actualizarProducto(@Param('pedidoId', ParseUUIDPipe) pedidoId: string, @Param('productoId', ParseUUIDPipe) productoId: string, @Body() dto: CreateProductoDto) { return this.service.actualizarProducto(pedidoId, productoId, dto); }
