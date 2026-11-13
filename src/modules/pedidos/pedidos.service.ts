@@ -55,28 +55,28 @@ export class PedidosService {
     }
   }
 
-  private async nextPedidoFolio(db: Tx): Promise<string> {
-    const last = await db.pedido.findFirst({ where: { folio: { startsWith: 'PED-' } }, orderBy: { folio: 'desc' }, select: { folio: true } });
-    const sequence = last ? Number(last.folio.replace('PED-', '')) + 1 : 1;
-    return `PED-${String(sequence).padStart(4, '0')}`;
+  private pedidoFolio(numeroPedido: number): string {
+    return `PED-${String(numeroPedido).padStart(4, '0')}`;
   }
 
   async crear(dto: CreatePedidoDto): Promise<unknown> {
     await this.validateProducts(this.prisma, dto.productos);
     if (dto.clienteId) { const c = await this.prisma.cliente.findUnique({ where: { id: dto.clienteId } }); if (!c) throw new BadRequestException('Cliente no encontrado'); if (!c.activo) throw new BadRequestException('Cliente está inactivo'); }
     const t = await this.prisma.tipografia.findUnique({ where: { id: dto.tipografiaId } }); if (!t) throw new BadRequestException('Tipografía no encontrada'); if (!t.activo) throw new BadRequestException('Tipografía está inactiva');
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const row = await this.prisma.$transaction(async (tx) => {
-          const folio = await this.nextPedidoFolio(tx);
-          const pedido = await tx.pedido.create({ data: { folio, clienteId: dto.clienteId ?? null, clienteNombre: dto.clienteNombre, fechaEvento: parseDateOnly(dto.fechaEvento), ubicacion: dto.ubicacion, terminacionContacto: dto.terminacionContacto, tipoCliente: enumFromApi(dto.tipoCliente), tipoClienteOtro: dto.tipoClienteOtro, anticipo: dto.anticipo, tipografiaId: dto.tipografiaId, dualTexto: enumFromApi(dto.dualTexto), esUrgente: dto.esUrgente ?? false, estatusPedidoEncaje: dto.estatusPedidoEncaje ? enumFromApi<EstatusPedidoEncaje>(dto.estatusPedidoEncaje) : undefined, observaciones: dto.observaciones } });
-          for (const product of dto.productos) await this.createProductPieces(tx, product, pedido.id);
-          return tx.pedido.findUniqueOrThrow({ where: { id: pedido.id }, include: pedidoInclude });
-        });
-        return this.mapPedido(row);
-      } catch (e) { if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002' && attempt === 0) continue; return handlePrismaError(e, 'pedido'); }
+    const folio = this.pedidoFolio(dto.numeroPedido);
+    try {
+      const row = await this.prisma.$transaction(async (tx) => {
+        const existing = await tx.pedido.findUnique({ where: { folio }, select: { id: true } });
+        if (existing) throw new ConflictException('El número de pedido ya existe.');
+        const pedido = await tx.pedido.create({ data: { folio, clienteId: dto.clienteId ?? null, clienteNombre: dto.clienteNombre, fechaEvento: parseDateOnly(dto.fechaEvento), ubicacion: dto.ubicacion, terminacionContacto: dto.terminacionContacto, tipoCliente: enumFromApi(dto.tipoCliente), tipoClienteOtro: dto.tipoClienteOtro, anticipo: dto.anticipo, tipografiaId: dto.tipografiaId, dualTexto: enumFromApi(dto.dualTexto), esUrgente: dto.esUrgente ?? false, estatusPedidoEncaje: dto.estatusPedidoEncaje ? enumFromApi<EstatusPedidoEncaje>(dto.estatusPedidoEncaje) : undefined, observaciones: dto.observaciones } });
+        for (const product of dto.productos) await this.createProductPieces(tx, product, pedido.id);
+        return tx.pedido.findUniqueOrThrow({ where: { id: pedido.id }, include: pedidoInclude });
+      });
+      return this.mapPedido(row);
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new ConflictException('El número de pedido ya existe.');
+      return handlePrismaError(e, 'pedido');
     }
-    throw new ConflictException('No fue posible generar un folio único');
   }
 
   async listar(query: { buscar?: string; estatus?: string; estatusPedidoEncaje?: string }) {

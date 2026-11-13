@@ -25,6 +25,7 @@ export class CreateProductoDto {
 }
 
 export class CreatePedidoDto {
+  @IsInt() @Min(1) numeroPedido!: number;
   @IsOptional() @IsUUID() clienteId?: string | null;
   @IsString() clienteNombre!: string;
   @IsDateString() fechaEvento!: string;
